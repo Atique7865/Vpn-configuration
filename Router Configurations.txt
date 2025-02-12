@@ -1,0 +1,92 @@
+hostname DHK-Router
+interface gigabitethernet 0/0
+ip address 192.168.1.1 255.255.255.0
+no shutdown
+interface gigabitethernet 0/1
+ip address 209.165.100.1 255.255.255.0
+no shutdown
+description To-BTCL
+exit
+ip route 0.0.0.0 0.0.0.0 209.165.100.2
+
+
+hostname BTCL
+interface gigabitethernet 0/0
+ip address 209.165.100.2 255.255.255.0
+no shutdown
+interface gigabitethernet 0/1
+ip address 209.165.200.2 255.255.255.0
+no shutdown
+
+
+hostname Rang-Router
+interface gigabitethernet 0/1
+ip address 209.165.200.1 255.255.255.0
+no shutdown
+interface gigabitethernet 0/0
+ip address 192.168.2.1 255.255.255.0
+no shutdown
+description To-BTCL
+exit
+ip route 0.0.0.0 0.0.0.0 209.165.200.2
+
+show version
+License Update
+license boot module c1900 technology-package securityk9
+yes
+exit
+reload
+
+
+
+2. Make sure routers have the security license enabled:
+license boot module c1900 technology-package securityk9
+
+3. Configure IPsec on the routers at each end of the tunnel (R1 and R3)
+!R1
+crypto isakmp policy 10
+ encryption aes 256
+ authentication pre-share
+ group 5
+!
+crypto isakmp key secretkey address 209.165.200.1
+!
+crypto ipsec transform-set R1-R2 esp-aes 256 esp-sha-hmac
+!
+crypto map IPSEC-MAP 10 ipsec-isakmp 
+ set peer 209.165.200.1
+ set pfs group5
+ set security-association lifetime seconds 86400
+ set transform-set R1-R2 
+ match address 100
+!
+interface GigabitEthernet0/1
+ crypto map IPSEC-MAP
+!
+access-list 100 permit ip 192.168.1.0 0.0.0.255 192.168.2.0 0.0.0.255
+
+******************************************************
+!R2
+crypto isakmp policy 10
+ encryption aes 256
+ authentication pre-share
+ group 5
+!
+crypto isakmp key secretkey address 209.165.100.1
+!
+crypto ipsec transform-set R2-R1 esp-aes 256 esp-sha-hmac
+!
+crypto map IPSEC-MAP 10 ipsec-isakmp 
+ set peer 209.165.100.1
+ set pfs group5
+ set security-association lifetime seconds 86400
+ set transform-set R2-R1 
+ match address 100
+!
+interface GigabitEthernet0/1
+ crypto map IPSEC-MAP
+!
+access-list 100 permit ip 192.168.2.0 0.0.0.255 192.168.1.0 0.0.0.255
+
+
+
